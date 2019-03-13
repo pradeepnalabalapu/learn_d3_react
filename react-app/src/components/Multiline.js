@@ -1,7 +1,7 @@
 import * as d3 from "d3-3";
 import React, { Component } from "react";
 import "../styles/Multiline.css";
-import elastic_data from "../d3_multichart/data.js";
+import elastic_data from "../data/data.js";
 
 class Multiline extends Component {
   componentDidMount() {
