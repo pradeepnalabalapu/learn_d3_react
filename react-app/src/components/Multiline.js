@@ -139,6 +139,43 @@ function makeLineChart(dataset, xName, yObjs, axisLables) {
   function mouseout_none_fn() {
     focus.style("display", "none");
   }
+  function mousemove() {
+    var x0 = chartObj.xScale.invert(d3.mouse(this)[0]),
+      i = chartObj.bisectYear(dataset, x0, 1),
+      d0 = chartObj.data[i - 1],
+      d1 = chartObj.data[i];
+    try {
+      var d = x0 - chartObj.xFunct(d0) > chartObj.xFunct(d1) - x0 ? d1 : d0;
+    } catch (e) {
+      return;
+    }
+    var minY = chartObj.height;
+    for (var y in yObjs) {
+      yObjs[y].tooltip.attr(
+        "transform",
+        "translate(" +
+          chartObj.xScale(chartObj.xFunct(d)) +
+          "," +
+          chartObj.yScale(yObjs[y].yFunct(d)) +
+          ")"
+      );
+      yObjs[y].tooltip
+        .select("text")
+        .text(chartObj.yFormatter(yObjs[y].yFunct(d)));
+      minY = Math.min(minY, chartObj.yScale(yObjs[y].yFunct(d)));
+    }
+
+    focus
+      .select(".focus.line")
+      .attr(
+        "transform",
+        "translate(" + chartObj.xScale(chartObj.xFunct(d)) + ")"
+      )
+      .attr("y1", minY);
+    focus
+      .select(".focus.year")
+      .text("Year: " + chartObj.xFormatter(chartObj.xFunct(d)));
+  }
 
   init();
 
@@ -324,6 +361,16 @@ function makeLineChart(dataset, xName, yObjs, axisLables) {
         .attr("dy", ".35em");
     }
 
+    // Overlay to capture hover
+    chartObj.svg
+      .append("rect")
+      .attr("class", "overlay")
+      .attr("width", chartObj.width)
+      .attr("height", chartObj.height)
+      .on("mouseover", mouseover_null_fn)
+      .on("mouseout", mouseout_none_fn)
+      .on("mousemove", mousemove);
+
     d3.select(window).on("resize." + chartSelector, chartObj.update_svg_size);
 
     return chartObj;
@@ -356,56 +403,9 @@ function makeLineChart(dataset, xName, yObjs, axisLables) {
       .style("text-anchor", "middle")
       .text(chartObj.xAxisLable);
 
-    // Overlay to capture hover
-    chartObj.svg
-      .append("rect")
-      .attr("class", "overlay")
-      .attr("width", chartObj.width)
-      .attr("height", chartObj.height)
-      .on("mouseover", mouseover_null_fn)
-      .on("mouseout", mouseout_none_fn)
-      .on("mousemove", mousemove);
-
     chartObj.rendered = true;
 
     return chartObj;
-    function mousemove() {
-      var x0 = chartObj.xScale.invert(d3.mouse(this)[0]),
-        i = chartObj.bisectYear(dataset, x0, 1),
-        d0 = chartObj.data[i - 1],
-        d1 = chartObj.data[i];
-      try {
-        var d = x0 - chartObj.xFunct(d0) > chartObj.xFunct(d1) - x0 ? d1 : d0;
-      } catch (e) {
-        return;
-      }
-      var minY = chartObj.height;
-      for (var y in yObjs) {
-        yObjs[y].tooltip.attr(
-          "transform",
-          "translate(" +
-            chartObj.xScale(chartObj.xFunct(d)) +
-            "," +
-            chartObj.yScale(yObjs[y].yFunct(d)) +
-            ")"
-        );
-        yObjs[y].tooltip
-          .select("text")
-          .text(chartObj.yFormatter(yObjs[y].yFunct(d)));
-        minY = Math.min(minY, chartObj.yScale(yObjs[y].yFunct(d)));
-      }
-
-      focus
-        .select(".focus.line")
-        .attr(
-          "transform",
-          "translate(" + chartObj.xScale(chartObj.xFunct(d)) + ")"
-        )
-        .attr("y1", minY);
-      focus
-        .select(".focus.year")
-        .text("Year: " + chartObj.xFormatter(chartObj.xFunct(d)));
-    }
   };
   return chartObj;
 }
