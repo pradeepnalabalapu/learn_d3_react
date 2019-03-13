@@ -22,7 +22,6 @@ class Multiline extends Component {
 
     console.log(dataset);
     var chart = makeLineChart(
-      dataset,
       "date",
       {
         auc_rf: { column: "auc_rf" },
@@ -32,7 +31,16 @@ class Multiline extends Component {
       { xAxis: "Date", yAxis: "Normalized" }
     );
     chart.bind("#" + this.props.chart_id);
-    chart.render();
+    var index = 1;
+    chart.render(dataset.slice(0, index));
+    var handle = window.setInterval(function() {
+      if (index < 10) {
+        index += 1;
+        chart.render(dataset.slice(0, index));
+      } else {
+        window.clearInterval(handle);
+      }
+    }, 5000);
   }
 
   render() {
@@ -40,7 +48,7 @@ class Multiline extends Component {
   }
 }
 
-function makeLineChart(dataset, xName, yObjs, axisLables) {
+function makeLineChart(xName, yObjs, axisLables) {
   var chartObj = {};
   var color = d3.scale.category10();
   //global variables
@@ -58,7 +66,7 @@ function makeLineChart(dataset, xName, yObjs, axisLables) {
      *           {y1:{column:'',name:'name',color:'color'},y2}
      *                */
 
-    chartObj.data = dataset;
+    //chartObj.data = dataset;
     chartObj.margin = { top: 15, right: 60, bottom: 30, left: 50 };
     chartObj.width = 650 - chartObj.margin.left - chartObj.margin.right;
     chartObj.height = 480 - chartObj.margin.top - chartObj.margin.bottom;
@@ -120,7 +128,7 @@ function makeLineChart(dataset, xName, yObjs, axisLables) {
       .orient("left")
       .tickFormat(chartObj.yFormatter); //< Can be overridden in definition
 
-    // Build line building functions
+    chartObj.xScale = d3.scale.linear().range([0, chartObj.width]);
   }
   function getYScaleFn(yObj) {
     return function(d) {
@@ -141,7 +149,7 @@ function makeLineChart(dataset, xName, yObjs, axisLables) {
   }
   function mousemove() {
     var x0 = chartObj.xScale.invert(d3.mouse(this)[0]),
-      i = chartObj.bisectYear(dataset, x0, 1),
+      i = chartObj.bisectYear(chartObj.data, x0, 1),
       d0 = chartObj.data[i - 1],
       d1 = chartObj.data[i];
     try {
@@ -178,29 +186,6 @@ function makeLineChart(dataset, xName, yObjs, axisLables) {
   }
 
   init();
-
-  //Create scale functions
-  chartObj.xScale = d3.scale
-    .linear()
-    .range([0, chartObj.width])
-    .domain(d3.extent(chartObj.data, chartObj.xFunct)); //< Can be overridden in definition
-
-  //Create axis
-  chartObj.xAxis = d3.svg
-    .axis()
-    .scale(chartObj.xScale)
-    .orient("bottom")
-    .tickFormat(chartObj.xFormatter); //< Can be overridden in definition
-
-  for (var yObj in yObjs) {
-    yObjs[yObj].line = d3.svg
-      .line()
-      .interpolate("cardinal")
-      .x(function(d) {
-        return chartObj.xScale(chartObj.xFunct(d));
-      })
-      .y(getYScaleFn(yObj));
-  }
 
   //chartObj.svg;
 
@@ -276,6 +261,7 @@ function makeLineChart(dataset, xName, yObjs, axisLables) {
     chartObj.chartDiv = d3.select(chartSelector);
 
     chartObj.update_svg_size();
+    //Create SVG element
     chartObj.svg = chartObj.chartDiv
       .append("svg")
       .attr("class", "chart-area")
@@ -377,8 +363,28 @@ function makeLineChart(dataset, xName, yObjs, axisLables) {
   };
 
   // Render the chart
-  chartObj.render = function() {
-    //Create SVG element
+  chartObj.render = function(dataset) {
+    //Create scale functions
+    chartObj.data = dataset;
+    chartObj.xScale.domain(d3.extent(chartObj.data, chartObj.xFunct)); //< Can be overridden in definition
+
+    //Create axis
+    chartObj.xAxis = d3.svg
+      .axis()
+      .scale(chartObj.xScale)
+      .orient("bottom")
+      .tickFormat(chartObj.xFormatter); //< Can be overridden in definition
+
+    // Build line building functions
+    for (var yObj in yObjs) {
+      yObjs[yObj].line = d3.svg
+        .line()
+        .interpolate("cardinal")
+        .x(function(d) {
+          return chartObj.xScale(chartObj.xFunct(d));
+        })
+        .y(getYScaleFn(yObj));
+    }
 
     // Draw Lines
     for (var y in yObjs) {
